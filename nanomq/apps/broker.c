@@ -290,22 +290,7 @@ server_cb(void *arg)
 				break;
 			}
 		}
-		// else if (work->proto == PROTO_HTTP_SERVER ||
-		//     work->proto == PROTO_AWS_BRIDGE) {
 
-		// 	nng_msg *decode_msg = NULL;
-		// 	if (decode_common_mqtt_msg(&decode_msg, msg) != 0 ||
-		// 	    nng_msg_get_type(decode_msg) != CMD_PUBLISH) {
-		// 		conn_param_free(
-		// 		    nng_msg_get_conn_param(decode_msg));
-		// 		work->state = RECV;
-		// 		nng_ctx_recv(work->extra_ctx, work->aio);
-		// 		break;
-		// 	}
-		// 	msg = decode_msg;
-		// 	nng_msg_set_cmd_type(msg, CMD_PUBLISH);
-		// 	// alloc conn_param every single time
-		// }
 		work->msg       = msg;
 		work->pid       = nng_msg_get_pipe(work->msg);
 		work->cparam    = nng_msg_get_conn_param(work->msg);
@@ -424,19 +409,6 @@ server_cb(void *arg)
 			}
 			work->code = handle_pub(
 			    work, work->pipe_ct, work->proto_ver, false);
-			// if (work->proto == PROTO_HTTP_SERVER ||
-			//     work->proto == PROTO_AWS_BRIDGE) {
-			// 	nng_msg *rep_msg;
-			// 	// TODO carry code with msg
-			// 	nng_msg_alloc(&rep_msg, 0);
-			// 	nng_aio_set_msg(work->aio, rep_msg);
-			// 	if (work->code == SUCCESS)
-			// 		work->state = WAIT;
-			// 	else
-			// 		work->state = SEND;
-			// 	nng_ctx_send(work->extra_ctx, work->aio);
-			// 	break;
-			// }
 			if (work->code != SUCCESS) {
 				// what if extra ctx brings a wrong msg?
 				if (work->proto != PROTO_MQTT_BROKER) {
@@ -818,19 +790,9 @@ proto_work_init(nng_socket sock, nng_socket inproc_sock,
 	nng_socket_get_ptr(sock, NMQ_OPT_MQTT_QOS_DB, &w->sqlite_db);
 #endif
 
-	// only create ctx for extra ctx that are required to receive msg
-	if (config->http_server.enable && proto == PROTO_HTTP_SERVER) {
-		if ((rv = nng_ctx_open(&w->extra_ctx, inproc_sock)) != 0) {
-			nng_fatal("nng_ctx_open", rv);
-		}
-	} else if (config->bridge_mode) {
+	if (config->bridge_mode) {
 		if (proto == PROTO_MQTT_BRIDGE) {
 			if ((rv = nng_ctx_open(&w->extra_ctx, bridge_sock)) !=
-			    0) {
-				nng_fatal("nng_ctx_open", rv);
-			}
-		} else if (proto == PROTO_AWS_BRIDGE) {
-			if ((rv = nng_ctx_open(&w->extra_ctx, inproc_sock)) !=
 			    0) {
 				nng_fatal("nng_ctx_open", rv);
 			}
@@ -943,27 +905,6 @@ broker(conf *nanomq_conf)
 	// HTTP Service
 	nng_socket inproc_sock = { 0 };
 
-	// TODO: mine
-	// if (nanomq_conf->http_server.enable || nanomq_conf->bridge_mode) {
-	// 	log_debug("HTTP service initialization");
-	// 	rv = nng_rep0_open(&inproc_sock);
-	// 	if (rv != 0) {
-	// 		nng_fatal("nng_rep0_open", rv);
-	// 	}
-	// 	// set 4 ctx for HTPP as default
-	// 	if (nanomq_conf->http_server.enable) {
-	// 		num_ctx += HTTP_CTX_NUM;
-	// 	}
-	// }
-	// log_debug("HTTP init finished");
-	// Webhook service
-	// TODO: mine
-	// if (nanomq_conf->web_hook.enable) {
-	// 	log_debug("Webhook service initialization");
-	// 	start_webhook_service(nanomq_conf);
-	// }
-	// log_debug("webhook init finished");
-
 	// bridging client
 	if (nanomq_conf->bridge_mode) {
 		for (size_t t = 0; t < nanomq_conf->bridge.count; t++) {
@@ -986,20 +927,6 @@ broker(conf *nanomq_conf)
 #endif
 			}
 		}
-
-		// TODO: mine
-		//  #if defined(SUPP_AWS_BRIDGE)
-		//  		for (size_t c = 0; c <
-		//  nanomq_conf->aws_bridge.count; c++) {
-		//  log_debug("AWS bridgging service initialization");
-		//  conf_bridge_node *node =
-		//  nanomq_conf->aws_bridge.nodes[c]; 			if
-		//  (node->enable) { 				num_ctx +=
-		//  node->parallel;
-		//  			}
-		//  		}
-		//  #endif
-		//  		log_debug("bridge init finished");
 	}
 	// MQTT Broker service
 	struct work **works = nng_zalloc(num_ctx * sizeof(struct work *));
@@ -1035,37 +962,7 @@ broker(conf *nanomq_conf)
 				tmp += node->parallel;
 			}
 		}
-
-		// TODO: mine
-		// #if defined(SUPP_AWS_BRIDGE)
-		// 		for (size_t t = 0; t <
-		// nanomq_conf->aws_bridge.count; t++) {
-		// conf_bridge_node *node =
-		// nanomq_conf->aws_bridge.nodes[t]; 			if
-		// (node->enable) { 				for (i = tmp; i
-		// < (tmp + node->parallel); i++)
-		// {
-		// works[i] =
-		// proto_work_init(sock, inproc_sock, sock, PROTO_AWS_BRIDGE,
-		// db, db_ret, nanomq_conf);
-		// 				}
-		// 				tmp += node->parallel;
-		// 				aws_bridge_client(node);
-		// 			}
-		// 		}
-		// #endif
 	}
-
-	// create http server ctx
-	// TODO: mine
-	// if (nanomq_conf->http_server.enable) {
-	// 	log_debug("NanoMQ context initialization");
-	// 	for (i = tmp; i < tmp + HTTP_CTX_NUM; i++) {
-	// 		works[i] = proto_work_init(sock, inproc_sock,
-	// 		    sock, PROTO_HTTP_SERVER, db, db_ret,
-	// 		    nanomq_conf);
-	// 	}
-	// }
 
 	if (nanomq_conf->enable) {
 		if ((rv = nano_listen(
@@ -1082,54 +979,9 @@ broker(conf *nanomq_conf)
 		}
 	}
 
-	// TODO: mine
-	// if (nanomq_conf->tls.enable) {
-	// 	nng_listener tls_listener;
-
-	// 	if ((rv = nng_listener_create(
-	// 	         &tls_listener, sock, nanomq_conf->tls.url)) != 0) {
-	// 		nng_fatal("nng_listener_create tls", rv);
-	// 	}
-	// 	nng_listener_set(
-	// 	    tls_listener, NANO_CONF, nanomq_conf, sizeof(nanomq_conf));
-
-	// 	init_listener_tls(tls_listener, &nanomq_conf->tls);
-	// 	if ((rv = nng_listener_start(tls_listener, 0)) != 0) {
-	// 		nng_fatal("nng_listener_start tls", rv);
-	// 	}
-	// 	// TODO websocket ssl
-	// 	// if (nanomq_conf->websocket.enable) {
-	// 	// 	nng_listener wss_listener;
-	// 	// 	if ((rv = nng_listener_create(&wss_listener,
-	// 	// sock, 	         nanomq_conf->tls.url)) != 0) {
-	// 	// 		nng_fatal("nng_listener_create wss",
-	// 	// rv);
-	// 	// 	}
-	// 	// 	init_listener_tls(wss_listener,
-	// 	// &nanomq_conf->tls); 	if ((rv =
-	// 	// nng_listener_start(wss_listener, 0)) != 0) {
-	// 	// 		nng_fatal("nng_listener_start wss",
-	// 	// rv);
-	// 	// 	}
-	// 	// }
-	// }
-
-	// TODO: mine
-	// if (nanomq_conf->http_server.enable || nanomq_conf->bridge_mode) {
-	// 	if ((rv = nano_listen(inproc_sock, INPROC_SERVER_URL, NULL, 0,
-	// 	         nanomq_conf)) != 0) {
-	// 		nng_fatal("nng_listen " INPROC_SERVER_URL, rv);
-	// 	}
-	// }
-
 	for (i = 0; i < num_ctx; i++) {
 		server_cb(works[i]); // this starts them going (INIT state)
 	}
-
-	// if (nanomq_conf->http_server.enable) {
-	// 	nanomq_conf->http_server.broker_sock = &sock;
-	// 	start_rest_server(nanomq_conf);
-	// }
 
 	// ipc server for receiving commands from reload command
 	if (nanomq_conf->ipc_internal) {
@@ -1700,13 +1552,6 @@ broker_start(int argc, char **argv)
 		    ? nanomq_conf->url
 		    : nng_strdup(CONF_TCP_URL_DEFAULT);
 	}
-
-	// TODO: mine
-	// if (nanomq_conf->tls.enable) {
-	// 	nanomq_conf->tls.url = nanomq_conf->tls.url != NULL
-	// 	    ? nanomq_conf->tls.url
-	// 	    : nng_strdup(CONF_TLS_URL_DEFAULT);
-	// }
 
 	if (nanomq_conf->websocket.enable) {
 		nanomq_conf->websocket.url = nanomq_conf->websocket.url != NULL
