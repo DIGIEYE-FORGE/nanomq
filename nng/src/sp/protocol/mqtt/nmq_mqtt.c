@@ -55,7 +55,7 @@ struct nano_sock {
 	nni_lmq        waitlmq;   // this is for receving
 	nni_list       recvpipes; // list of pipes with data to receive
 	nni_list       recvq;
-	nano_ctx       ctx; // base socket
+	nano_ctx       ctx;       // base socket
 	nni_pollable   readable;
 	nni_pollable   writable;
 	conf          *conf;
@@ -70,7 +70,7 @@ struct nano_pipe {
 	nni_mtx       lk;
 	nni_pipe     *pipe;
 	nano_sock    *broker;
-	uint32_t      id;	// pipe id of nni_pipe
+	uint32_t      id;   // pipe id of nni_pipe
 	uint16_t      rid;  // index of packet ID for resending
 	uint16_t      keepalive;
 	void         *tree; // root node of db tree
@@ -86,7 +86,7 @@ struct nano_pipe {
 	// been triggered
 	uint16_t    ka_refresh;
 	conn_param *conn_param;
-	nni_lmq     rlmq; 		 // only for sending cache
+	nni_lmq     rlmq;        // only for sending cache
 	void       *nano_qos_db; // 'sqlite' or 'nni_id_hash_map'
 };
 
@@ -112,7 +112,6 @@ nano_nni_lmq_flush(nni_lmq *lmq, bool cp)
 		nni_msg_free(msg);
 	}
 }
-
 
 // only use for sending lmq
 static int
@@ -174,12 +173,12 @@ nano_nni_lmq_fini(nni_lmq *lmq)
 static void
 nano_pipe_timer_cb(void *arg)
 {
-	nano_pipe *      p            = arg;
-	uint32_t         qos_duration = p->broker->conf->qos_duration;
-	float            qos_backoff  = p->broker->conf->backoff;
-	nni_pipe        *npipe        = p->pipe;
-	nni_time         time;
-	int 		 rv = 0;
+	nano_pipe *p            = arg;
+	uint32_t   qos_duration = p->broker->conf->qos_duration;
+	float      qos_backoff  = p->broker->conf->backoff;
+	nni_pipe  *npipe        = p->pipe;
+	nni_time   time;
+	int        rv = 0;
 
 	bool is_sqlite = p->broker->conf->sqlite.enable;
 
@@ -193,7 +192,8 @@ nano_pipe_timer_cb(void *arg)
 		nng_time session_int = p->conn_param->session_expiry_interval;
 		p->ka_refresh++;
 		time = p->ka_refresh * (qos_duration);
-		rv += will_intval > 0 ? (nng_clock() > will_intval ? 1 : 0) : 0;
+		rv +=
+		    will_intval > 0 ? (nng_clock() > will_intval ? 1 : 0) : 0;
 		rv += session_int > 0 ? (time > session_int ? 1 : 0) : 0;
 		// check session expiry interval
 		log_trace("check session alive time %lu", time);
@@ -266,7 +266,7 @@ nano_pipe_timer_cb(void *arg)
 				nano_msg_set_dup(rmsg);
 				// deliver packet id to transport here
 				nni_aio_set_prov_data(
-				    &p->aio_send, (void *)(uintptr_t)pid);
+				    &p->aio_send, (void *) (uintptr_t) pid);
 				// put original msg into sending
 				nni_msg_clone(msg);
 				nni_aio_set_msg(&p->aio_send, msg);
@@ -353,18 +353,18 @@ nano_ctx_cancel_send(nni_aio *aio, void *arg, int rv)
 static void
 nano_ctx_send(void *arg, nni_aio *aio)
 {
-	nano_ctx *       ctx = arg;
-	nano_sock *      s   = ctx->sock;
-	nano_pipe *      p;
-	nni_msg *        msg;
-	int              rv;
-	uint32_t         pipe    = 0;
-	uint32_t *       pipeid;
-	uint8_t          qos_pac = 0;
-	uint8_t          qos     = 0;
-	char *           pld_pac = NULL;
-	int              tlen_pac = 0;
-	uint16_t         packetid;
+	nano_ctx  *ctx = arg;
+	nano_sock *s   = ctx->sock;
+	nano_pipe *p;
+	nni_msg   *msg;
+	int        rv;
+	uint32_t   pipe = 0;
+	uint32_t  *pipeid;
+	uint8_t    qos_pac  = 0;
+	uint8_t    qos      = 0;
+	char      *pld_pac  = NULL;
+	int        tlen_pac = 0;
+	uint16_t   packetid;
 
 	bool is_sqlite = s->conf->sqlite.enable;
 
@@ -385,7 +385,8 @@ nano_ctx_send(void *arg, nni_aio *aio)
 	nni_aio_set_prov_data(aio, NULL);
 	if (pipe == 0)
 		pipe = ctx->pipe_id; // reply to self
-	ctx->pipe_id = 0; // ensure connack/PING/DISCONNECT/PUBACK only sends once
+	ctx->pipe_id =
+	    0; // ensure connack/PING/DISCONNECT/PUBACK only sends once
 	if (ctx == &s->ctx) {
 		nni_pollable_clear(&s->writable);
 	}
@@ -413,11 +414,12 @@ nano_ctx_send(void *arg, nni_aio *aio)
 			pld_pac = nni_msg_get_pub_topic(msg, &tlen_pac);
 		}
 		subinfo *info = NULL;
-		NNI_LIST_FOREACH(p->pipe->subinfol, info) {
+		NNI_LIST_FOREACH (p->pipe->subinfol, info) {
 			if (!info)
 				continue;
 			if (topic_filtern(info->topic, pld_pac, tlen_pac)) {
-				qos = qos_pac > info->qos ? info->qos : qos_pac; // MIN
+				qos = qos_pac > info->qos ? info->qos
+				                          : qos_pac; // MIN
 				break;
 			}
 		}
@@ -578,11 +580,11 @@ nano_pipe_fini(void *arg)
 
 	void *nano_qos_db = p->pipe->nano_qos_db;
 
-	//Safely free the msgs in qos_db
+	// Safely free the msgs in qos_db
 	if (p->event == true) {
 		if (!p->broker->conf->sqlite.enable) {
-			nni_qos_db_remove_all_msg(false,
-				nano_qos_db, nmq_close_unack_msg_cb);
+			nni_qos_db_remove_all_msg(
+			    false, nano_qos_db, nmq_close_unack_msg_cb);
 			nni_qos_db_fini_id_hash(nano_qos_db);
 		}
 	} else {
@@ -611,7 +613,7 @@ nano_pipe_init(void *arg, nni_pipe *pipe, void *s)
 	nni_aio_init(&p->aio_timer, nano_pipe_timer_cb, p);
 	nni_aio_init(&p->aio_recv, nano_pipe_recv_cb, p);
 
-	p->conn_param  = nni_pipe_get_conn_param(pipe);
+	p->conn_param = nni_pipe_get_conn_param(pipe);
 	conn_param_free(p->conn_param);
 	p->id          = nni_pipe_id(pipe);
 	p->rid         = 1;
@@ -870,7 +872,7 @@ nano_pipe_send_cb(void *arg)
 {
 	nano_pipe *p = arg;
 	nni_msg   *msg;
-	int       rv;
+	int        rv;
 
 	log_trace("******** nano_pipe_send_cb %d ****", p->id);
 	// retry here
@@ -1016,10 +1018,11 @@ nano_pipe_recv_cb(void *arg)
 	nni_msg_set_pipe(msg, p->id);
 	ptr    = nni_msg_body(msg);
 	cparam = p->conn_param;
-	type = nng_msg_cmd_type(msg);
+	type   = nng_msg_cmd_type(msg);
 	switch (type) {
 	case CMD_SUBSCRIBE:
-		// 1. Clone for App layer 2. Clone should be called before being used
+		// 1. Clone for App layer 2. Clone should be called before
+		// being used
 		conn_param_clone(cparam);
 		// extract sub id
 		// Store Subid RAP Topic for sub
@@ -1045,12 +1048,14 @@ nano_pipe_recv_cb(void *arg)
 		}
 		break;
 	case CMD_UNSUBSCRIBE:
-		// 1. Clone for App layer 2. Clone should be called before being used
+		// 1. Clone for App layer 2. Clone should be called before
+		// being used
 		conn_param_clone(cparam);
 		// extract sub id
 		// Remove Subid RAP Topic stored
 		nni_mtx_lock(&p->lk);
-		rv = nmq_unsubinfo_decode(msg, npipe->subinfol, cparam->pro_ver);
+		rv = nmq_unsubinfo_decode(
+		    msg, npipe->subinfol, cparam->pro_ver);
 		if (rv < 0) {
 			log_error("Invalid unsubscribe packet!");
 			nni_msg_free(msg);
@@ -1079,7 +1084,8 @@ nano_pipe_recv_cb(void *arg)
 		break;
 	case CMD_CONNACK:
 	case CMD_PUBLISH:
-		// 1. Clone for App layer 2. Clone should be called before being used
+		// 1. Clone for App layer 2. Clone should be called before
+		// being used
 		conn_param_clone(cparam);
 		break;
 	case CMD_PUBACK:
@@ -1243,7 +1249,7 @@ static void
 nano_sock_setdb(void *arg, void *data)
 {
 	nano_sock *s         = arg;
-	conf *     nano_conf = data;
+	conf      *nano_conf = data;
 
 	s->conf = nano_conf;
 	s->db   = nano_conf->db_root;

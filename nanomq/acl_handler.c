@@ -49,7 +49,7 @@ callback(void *NotUsed, int argc, char **argv, char **azColName)
 
 		// printf("%s = %s\n", azColName[i], argv[i] ? argv[i] :
 		// "NULL");
-		if (strcmp(azColName[i], "email") == 0) {
+		if (strcmp(azColName[i], "username") == 0) {
 			tmp->username = strdup(argv[i]);
 		} else if (strcmp(azColName[i], "password") == 0) {
 			tmp->password = strdup(argv[i]);
@@ -69,7 +69,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 	char    *err_msg = 0;
 	user    *u       = calloc(1, sizeof(user));
 
-	int rc = sqlite3_open("./conf/edge.sqlite", &db);
+	int rc = sqlite3_open("./../conf/edge.sqlite", &db);
 
 	if (rc != SQLITE_OK) {
 
@@ -80,7 +80,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 		return false;
 	}
 
-	char *sql = custom_cat("SELECT * FROM users WHERE email = '",
+	char *sql = custom_cat("SELECT * FROM users WHERE username = '",
 	    (const char *) conn_param_get_username(param));
 	sql       = custom_cat(sql, "'");
 	rc        = sqlite3_exec(db, sql, callback, (void *) u, &err_msg);
@@ -109,7 +109,6 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 			return true;
 		}
 	}
-
 	return false;
 }
 // #endif

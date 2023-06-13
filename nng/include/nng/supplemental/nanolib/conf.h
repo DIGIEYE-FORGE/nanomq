@@ -1,6 +1,10 @@
 #ifndef CONF_H
 #define CONF_H
 
+#include "acl_conf.h"
+#include "nng/nng.h"
+#include "nng/supplemental/util/platform.h"
+#include "rule.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -8,10 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "nng/nng.h"
-#include "rule.h"
-#include "acl_conf.h"
-#include "nng/supplemental/util/platform.h"
 
 #define PID_PATH_NAME "/tmp/nanomq/nanomq.pid"
 #define CONF_PATH_NAME "/etc/nanomq.conf"
@@ -40,7 +40,6 @@
 #define RULE_ENG_MDB (1 << 2)
 #define RULE_ENG_RPB (1 << 3)
 
-
 #define FREE_NONULL(p)    \
 	if (p) {          \
 		free(p);  \
@@ -55,11 +54,11 @@
 struct conf_log {
 	uint8_t type;
 	int     level;
-	char *  dir;
-	char *  file;
-	FILE *  fp;
-	char *  abs_path;        // absolut path of log file
-	char *  rotation_sz_str; // 1000KB, 100MB, 10GB
+	char   *dir;
+	char   *file;
+	FILE   *fp;
+	char   *abs_path;        // absolut path of log file
+	char   *rotation_sz_str; // 1000KB, 100MB, 10GB
 	size_t  rotation_sz;     // unit: byte
 	size_t  rotation_count;  // rotation count
 };
@@ -94,7 +93,7 @@ typedef struct conf_tls conf_tls;
 struct conf_sqlite {
 	bool   enable;
 	size_t disk_cache_size;   // specify the max rows of sqlite table
-	char * mounted_file_path; // specify the db file path
+	char  *mounted_file_path; // specify the db file path
 	size_t
 	    flush_mem_threshold; // flush to sqlite table when count of message
 	                         // is equal or greater than this value
@@ -125,19 +124,19 @@ typedef enum {
 } http_param_type;
 
 struct conf_http_param {
-	char *          name;
+	char           *name;
 	http_param_type type;
 };
 
 typedef struct conf_http_param conf_http_param;
 
 struct conf_auth_http_req {
-	char *url;
-	char *method;
-	size_t header_count;
+	char              *url;
+	char              *method;
+	size_t             header_count;
 	conf_http_header **headers;
-	size_t param_count;
-	conf_http_param **params;
+	size_t             param_count;
+	conf_http_param  **params;
 	// TODO not support yet
 	conf_tls tls;
 };
@@ -157,11 +156,11 @@ struct conf_auth_http {
 typedef struct conf_auth_http conf_auth_http;
 
 struct conf_jwt {
-	char *iss;
-	char *public_keyfile;
-	char *private_keyfile;
-	char *public_key;
-	char *private_key;
+	char  *iss;
+	char  *public_keyfile;
+	char  *private_keyfile;
+	char  *public_key;
+	char  *private_key;
 	size_t public_key_len;
 	size_t private_key_len;
 };
@@ -196,16 +195,16 @@ struct conf_websocket {
 typedef struct conf_websocket conf_websocket;
 
 typedef struct {
-	char *   topic;
+	char    *topic;
 	uint32_t topic_len;
 	uint8_t  qos;
-	uint32_t stream_id;	    // only effective when multi_stream is enabled
+	uint32_t stream_id; // only effective when multi_stream is enabled
 } topics;
 
 typedef struct {
 	char *key;
 	char *value;
-}conf_user_property;
+} conf_user_property;
 
 typedef struct {
 	uint32_t             session_expiry_interval;
@@ -221,9 +220,9 @@ typedef struct {
 typedef struct {
 	uint8_t              payload_format_indicator;
 	uint32_t             message_expiry_interval;
-	char *               content_type;
-	char *               response_topic;
-	char *               correlation_data;
+	char                *content_type;
+	char                *response_topic;
+	char                *correlation_data;
 	uint32_t             will_delay_interval;
 	size_t               user_property_size;
 	conf_user_property **user_property;
@@ -258,38 +257,43 @@ struct conf_bridge_node {
 	conf_tls     tls;
 	conf_sqlite *sqlite;
 	nng_aio    **bridge_aio;
-	nng_aio     *bridge_reload_aio; // TODO nng_cv would be better
-	nng_aio     *bridge_reload_aio2; // Reload the bridge related to the current config
-	void        *bridge_arg;
+	nng_aio     *bridge_reload_aio;  // TODO nng_cv would be better
+	nng_aio     *bridge_reload_aio2; // Reload the bridge related to the
+	                                 // current config
+	void *bridge_arg;
 
-	nng_mtx     *mtx;
+	nng_mtx *mtx;
 
 	bool    will_flag;
-	char *  will_payload;
-	char *  will_topic;
+	char   *will_payload;
+	char   *will_topic;
 	bool    will_retain;
 	uint8_t will_qos;
 
 	// MQTT v5 property
-	conf_bridge_conn_properties *     conn_properties;
+	conf_bridge_conn_properties      *conn_properties;
 	conf_bridge_conn_will_properties *will_properties;
-	conf_bridge_sub_properties *      sub_properties;
+	conf_bridge_sub_properties       *sub_properties;
 
 #if defined(SUPP_QUIC)
 	// config params for QUIC only
-	bool         multi_stream;
-	bool         stream_auto_genid; // generate stream id automatically for each stream
-	bool         qos_first; // send QoS msg in high priority
-	bool         hybrid;  // hybrid bridging affects auto-reconnect of QUIC transport
-	uint64_t     qkeepalive;		 //keepalive timeout interval of QUIC transport
-	uint64_t     qconnect_timeout;	 // HandshakeIdleTimeoutMs of QUIC
-	uint32_t     qdiscon_timeout;	 // DisconnectTimeoutMs
-	uint32_t     qidle_timeout;	     // Disconnect after idle
-	uint32_t     qsend_idle_timeout; // SendIdleTimeoutMs
-	uint32_t     qinitial_rtt_ms;     // Initial RTT estimate.
-	uint32_t     qmax_ack_delay_ms;   // MaxAckDelayMs How long to wait after receiving data before sending an ACK.
-	uint8_t      qcongestion_control; // congestion control algorithm 1: bbr 0: cubic
-	bool         quic_0rtt;           // 0RTT.
+	bool multi_stream;
+	bool stream_auto_genid; // generate stream id automatically for each
+	                        // stream
+	bool qos_first;         // send QoS msg in high priority
+	bool
+	    hybrid; // hybrid bridging affects auto-reconnect of QUIC transport
+	uint64_t qkeepalive; // keepalive timeout interval of QUIC transport
+	uint64_t qconnect_timeout;   // HandshakeIdleTimeoutMs of QUIC
+	uint32_t qdiscon_timeout;    // DisconnectTimeoutMs
+	uint32_t qidle_timeout;      // Disconnect after idle
+	uint32_t qsend_idle_timeout; // SendIdleTimeoutMs
+	uint32_t qinitial_rtt_ms;    // Initial RTT estimate.
+	uint32_t qmax_ack_delay_ms;  // MaxAckDelayMs How long to wait after
+	                             // receiving data before sending an ACK.
+	uint8_t qcongestion_control; // congestion control algorithm 1: bbr 0:
+	                             // cubic
+	bool quic_0rtt;              // 0RTT.
 #endif
 };
 
@@ -341,10 +345,10 @@ typedef struct {
 	conf_http_server http_server;
 
 	// vsomeip parameter
-	uint16_t    service_id;
-	uint16_t    service_instance_id;
-	uint16_t    service_method_id;
-	char       *conf_path;
+	uint16_t service_id;
+	uint16_t service_instance_id;
+	uint16_t service_method_id;
+	char    *conf_path;
 } vsomeip_gateway_conf;
 
 typedef struct {
@@ -364,22 +368,22 @@ typedef struct {
 	uint8_t     proto_ver;
 	uint16_t    port;
 	uint16_t    keepalive;
-	char *      address;
-	char *      clientid;
-	char *      username;
-	char *      password;
+	char       *address;
+	char       *clientid;
+	char       *username;
+	char       *password;
 	conf_tls    tls;
 } dds_gateway_mqtt;
 
 typedef struct {
-	char * idl_type;
+	char  *idl_type;
 	size_t domain_id;
 	bool   shm_mode;
-	char * shm_log_level;
+	char  *shm_log_level;
 } dds_gateway_dds;
 
 typedef struct {
-	char *              path;
+	char               *path;
 	dds_gateway_mqtt    mqtt;
 	dds_gateway_dds     dds;
 	dds_gateway_forward forward;
@@ -402,37 +406,33 @@ typedef enum {
 	UNKNOWN_EVENT,
 } webhook_event;
 
-typedef enum {
-	plain,
-	base64,
-	base62
-} hook_payload_type;
+typedef enum { plain, base64, base62 } hook_payload_type;
 
 struct conf_web_hook_rule {
 	uint16_t      rule_num;
 	webhook_event event;
-	char *        action;
-	char *        topic;
+	char         *action;
+	char         *topic;
 };
 
 typedef struct conf_web_hook_rule conf_web_hook_rule;
 
 struct conf_web_hook {
-	bool   enable;
-	char * url;
-	size_t pool_size;
-	hook_payload_type encode_payload;
-	size_t header_count;
+	bool               enable;
+	char              *url;
+	size_t             pool_size;
+	hook_payload_type  encode_payload;
+	size_t             header_count;
 	conf_http_header **headers;
 
-	uint16_t            rule_count;
+	uint16_t             rule_count;
 	conf_web_hook_rule **rules;
 
 	// TODO not support yet
 	conf_tls tls;
 };
 
-typedef struct conf_web_hook  conf_web_hook;
+typedef struct conf_web_hook conf_web_hook;
 
 typedef enum {
 	memory,
@@ -440,23 +440,23 @@ typedef enum {
 } persistence_type;
 
 struct conf {
-	char      *conf_file;
-	char      *url;
-	bool       enable;
-	int        num_taskq_thread;
-	int        max_taskq_thread;
-	int        property_size;
-	int        msq_len;
-	uint32_t   parallel;
-	uint32_t   max_packet_size;
-	uint32_t   client_max_packet_size;
-	uint32_t   qos_duration;
-	float      backoff;
-	void      *db_root;
-	bool       allow_anonymous;
-	bool       daemon;
-	bool       ipc_internal;
-	bool       bridge_mode;
+	char    *conf_file;
+	char    *url;
+	bool     enable;
+	int      num_taskq_thread;
+	int      max_taskq_thread;
+	int      property_size;
+	int      msq_len;
+	uint32_t parallel;
+	uint32_t max_packet_size;
+	uint32_t client_max_packet_size;
+	uint32_t qos_duration;
+	float    backoff;
+	void    *db_root;
+	bool     allow_anonymous;
+	bool     daemon;
+	bool     ipc_internal;
+	bool     bridge_mode;
 
 	conf_sqlite      sqlite;
 	conf_tls         tls;
@@ -466,7 +466,7 @@ struct conf {
 	conf_bridge      aws_bridge;
 	conf_web_hook    web_hook;
 #if defined(ENABLE_LOG)
-	conf_log         log;
+	conf_log log;
 #endif
 #if defined(SUPP_RULE_ENGINE)
 	conf_rule rule_eng;
@@ -502,10 +502,9 @@ NNG_DECL void conf_fini(conf *nanomq_conf);
 NNG_DECL void conf_update(const char *fpath, const char *key, char *value);
 NNG_DECL void conf_update2(const char *fpath, const char *key1,
     const char *key2, const char *key3, char *value);
-NNG_DECL void
-conf_bridge_node_parse(
+NNG_DECL void conf_bridge_node_parse(
     conf_bridge_node *node, conf_sqlite *bridge_sqlite, cJSON *obj);
-NNG_DECL void   conf_bridge_node_destroy(conf_bridge_node *node);
+NNG_DECL void conf_bridge_node_destroy(conf_bridge_node *node);
 
 NNG_DECL void conf_update_var(
     const char *fpath, const char *key, uint8_t type, void *var);

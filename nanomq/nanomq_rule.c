@@ -1,13 +1,13 @@
 #include "include/nanomq_rule.h"
-#include "nng/supplemental/nanolib/log.h"
 #include "nng/mqtt/mqtt_client.h"
 #include "nng/nng.h"
 #include "nng/protocol/mqtt/mqtt.h"
+#include "nng/supplemental/nanolib/cvector.h"
+#include "nng/supplemental/nanolib/log.h"
+#include "nng/supplemental/nanolib/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "nng/supplemental/nanolib/cvector.h"
-#include "nng/supplemental/nanolib/utils.h"
 
 #include "include/nanomq.h"
 
@@ -36,8 +36,8 @@ static char *type_arr[] = {
 	" TEXT",
 };
 
-
-static int finish_with_error(MYSQL *con, rule *rules, int index)
+static int
+finish_with_error(MYSQL *con, rule *rules, int index)
 {
 	log_error("%s", mysql_error(con));
 	mysql_close(con);
@@ -103,6 +103,7 @@ nano_client(nng_socket *sock, repub_t *repub)
 	} else {
 		if ((rv = nng_mqtt_client_open(sock)) != 0) {
 			nng_fatal("nng_mqtt_client_open", rv);
+
 			return rv;
 		}
 	}
@@ -147,13 +148,12 @@ nanomq_client_sqlite(conf_rule *cr, bool init_last)
 	sqlite3 *sdb;
 	int      rc = 0;
 	if (NULL == cr->rdb[0]) {
-		char *sqlite_path = cr->sqlite_db
-		    ? cr->sqlite_db
-		    : "/tmp/rule_engine.db";
-		rc                = sqlite3_open(sqlite_path, &sdb);
+		char *sqlite_path =
+		    cr->sqlite_db ? cr->sqlite_db : "/tmp/rule_engine.db";
+		rc = sqlite3_open(sqlite_path, &sdb);
 		if (rc != SQLITE_OK) {
-			log_debug("Cannot open database: %s\n",
-			    sqlite3_errmsg(sdb));
+			log_debug(
+			    "Cannot open database: %s\n", sqlite3_errmsg(sdb));
 			sqlite3_close(sdb);
 			exit(1);
 		}
@@ -202,15 +202,12 @@ nanomq_client_sqlite(conf_rule *cr, bool init_last)
 	return 0;
 }
 
-
 int
 nanomq_client_mysql(conf_rule *cr, bool init_last)
 {
-	int      rc = 0;
+	int rc = 0;
 
-	char *mysql_db = cr->mysql_db
-	    ? cr->mysql_db
-	    : "mysql_rule_db";
+	char *mysql_db = cr->mysql_db ? cr->mysql_db : "mysql_rule_db";
 
 	char mysql_table[1024];
 	for (int i = 0; i < cvector_size(cr->rules); i++) {
@@ -242,30 +239,28 @@ nanomq_client_mysql(conf_rule *cr, bool init_last)
 			strcat(table, ");");
 
 			rule_mysql *mysql = cr->rules[i].mysql;
-			MYSQL *con = mysql_init(NULL);
-			mysql->conn = con;
+			MYSQL      *con   = mysql_init(NULL);
+			mysql->conn       = con;
 			if (con == NULL) {
 				rc = finish_with_error(con, cr->rules, i--);
 				continue;
 			}
 
-			if (mysql_real_connect(con, mysql->host, mysql->username, mysql->password,
-			        mysql_db, 0, NULL, 0) == NULL) {
+			if (mysql_real_connect(con, mysql->host,
+			        mysql->username, mysql->password, mysql_db, 0,
+			        NULL, 0) == NULL) {
 				rc = finish_with_error(con, cr->rules, i--);
 				continue;
 			}
-
 
 			if (mysql_query(con, table)) {
 				rc = finish_with_error(con, cr->rules, i--);
 				continue;
 			}
-
 		}
 	}
 
 	return 0;
 }
-
 
 #endif

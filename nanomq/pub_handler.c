@@ -14,20 +14,20 @@
 #include <mysql.h>
 #endif
 
-#include "include/nanomq.h"
-#include "nng/nng.h"
-#include "nng/mqtt/packet.h"
-#include "nng/supplemental/nanolib/mqtt_db.h"
-#include "nng/supplemental/nanolib/cJSON.h"
-#include "include/nanomq_rule.h"
+#include "include/acl_handler.h"
 #include "include/bridge.h"
+#include "include/nanomq.h"
+#include "include/nanomq_rule.h"
 #include "include/pub_handler.h"
 #include "include/sub_handler.h"
-#include "include/acl_handler.h"
+#include "nng/mqtt/packet.h"
+#include "nng/nng.h"
 #include "nng/protocol/mqtt/mqtt_parser.h"
-#include "nng/supplemental/util/platform.h"
-#include "nng/supplemental/sqlite/sqlite3.h"
+#include "nng/supplemental/nanolib/cJSON.h"
 #include "nng/supplemental/nanolib/log.h"
+#include "nng/supplemental/nanolib/mqtt_db.h"
+#include "nng/supplemental/sqlite/sqlite3.h"
+#include "nng/supplemental/util/platform.h"
 
 #define ENABLE_RETAIN 1
 #define SUPPORT_MQTT5_0 1
@@ -84,7 +84,7 @@ void
 init_pipe_content(struct pipe_content *pipe_ct)
 {
 	log_debug("pub_handler: init pipe_info");
-	pipe_ct->msg_infos     = NULL;
+	pipe_ct->msg_infos = NULL;
 }
 
 static void
@@ -130,8 +130,7 @@ static bool
 cmp_int(int value_checked, int value_seted, rule_cmp_type type)
 {
 	bool filter = true;
-	switch (type)
-	{
+	switch (type) {
 	case RULE_CMP_EQUAL:
 		if (value_checked != value_seted) {
 			filter = false;
@@ -163,7 +162,7 @@ cmp_int(int value_checked, int value_seted, rule_cmp_type type)
 			filter = false;
 		}
 		break;
-	
+
 	default:
 		break;
 	}
@@ -191,8 +190,9 @@ cmp_str(
 		}
 		break;
 	default:
-		log_debug("Unsupport compare symbol, string only support equal "
-		        "and unequal!");
+		log_debug(
+		    "Unsupport compare symbol, string only support equal "
+		    "and unequal!");
 		break;
 	}
 	return filter;
@@ -226,7 +226,9 @@ payload_filter(pub_packet_struct *pp, rule *info)
 		case cJSON_Number:;
 			long num = cJSON_GetNumberValue(jp);
 
-			if (payload->filter && !cmp_int(num, atoi(payload->filter), payload->cmp_type)) {
+			if (payload->filter &&
+			    !cmp_int(num, atoi(payload->filter),
+			        payload->cmp_type)) {
 				filter = false;
 			} else {
 				payload->value = (void *) num;
@@ -235,7 +237,9 @@ payload_filter(pub_packet_struct *pp, rule *info)
 			break;
 		case cJSON_String:;
 			char *str = cJSON_GetStringValue(jp);
-			if (payload->filter && !cmp_str(str, strlen(str), payload->filter, payload->cmp_type)) {
+			if (payload->filter &&
+			    !cmp_str(str, strlen(str), payload->filter,
+			        payload->cmp_type)) {
 				filter = false;
 			} else {
 				if (payload->value)
@@ -246,7 +250,8 @@ payload_filter(pub_packet_struct *pp, rule *info)
 			break;
 		case cJSON_Object:;
 			cJSON *filter = cJSON_Parse(payload->filter);
-			if (!payload->is_store && filter && !cJSON_Compare(jp, filter, true)) {
+			if (!payload->is_store && filter &&
+			    !cJSON_Compare(jp, filter, true)) {
 				filter = false;
 			} else {
 				// if (payload->value)
@@ -262,7 +267,6 @@ payload_filter(pub_packet_struct *pp, rule *info)
 	}
 	cJSON_Delete(jp_reset);
 
-
 	return filter;
 }
 
@@ -270,12 +274,13 @@ static bool
 rule_engine_filter(nano_work *work, rule *info)
 {
 	pub_packet_struct *pp     = work->pub_packet;
-	char	      *topic  = pp->var_header.publish.topic_name.body;
+	char              *topic  = pp->var_header.publish.topic_name.body;
 	conn_param        *cp     = work->cparam;
 	bool               filter = true;
 	if (RULE_FORWORD_REPUB == info->forword_type) {
 		const char *cid = (const char *) conn_param_get_clientid(cp);
-		if (info->repub->clientid && cmp_str(cid, strlen(cid), info->repub->clientid,
+		if (info->repub->clientid &&
+		    cmp_str(cid, strlen(cid), info->repub->clientid,
 		        RULE_CMP_EQUAL)) {
 			return false;
 		}
@@ -393,13 +398,12 @@ rule_engine_filter(nano_work *work, rule *info)
 	return filter;
 }
 
-
-static char*
+static char *
 generate_key(rule *info, int j, nano_work *work)
 {
-	pub_packet_struct *pp = work->pub_packet;
-	conn_param        *cp = work->cparam;
-	static uint32_t    index      = 0;
+	pub_packet_struct *pp    = work->pub_packet;
+	conn_param        *cp    = work->cparam;
+	static uint32_t    index = 0;
 
 	if (UINT32_MAX == index) {
 		index = 0;
@@ -411,16 +415,19 @@ generate_key(rule *info, int j, nano_work *work)
 		switch (j) {
 		case RULE_QOS:
 			if (info->key->auto_inc) {
-				sprintf(str, "%d%d", pp->fixed_header.qos, index++);
+				sprintf(str, "%d%d", pp->fixed_header.qos,
+				    index++);
 			} else {
 				sprintf(str, "%d", pp->fixed_header.qos);
 			}
 			break;
 		case RULE_ID:
 			if (info->key->auto_inc) {
-				sprintf(str, "%d%d", pp->var_header.publish.packet_id, index++);
+				sprintf(str, "%d%d",
+				    pp->var_header.publish.packet_id, index++);
 			} else {
-				sprintf(str, "%d", pp->var_header.publish.packet_id);
+				sprintf(str, "%d",
+				    pp->var_header.publish.packet_id);
 			}
 			break;
 		case RULE_TOPIC:;
@@ -457,9 +464,11 @@ generate_key(rule *info, int j, nano_work *work)
 			break;
 		case RULE_TIMESTAMP:
 			if (info->key->auto_inc) {
-				sprintf(str, "%ld%d", (unsigned long)time(NULL), index++);
+				sprintf(str, "%ld%d",
+				    (unsigned long) time(NULL), index++);
 			} else {
-				sprintf(str, "%ld", (unsigned long)time(NULL));
+				sprintf(
+				    str, "%ld", (unsigned long) time(NULL));
 			}
 			break;
 		case RULE_PAYLOAD_ALL:;
@@ -471,28 +480,35 @@ generate_key(rule *info, int j, nano_work *work)
 			}
 			break;
 		case RULE_PAYLOAD_FIELD:;
-			cJSON *jp = cJSON_ParseWithLength(pp->payload.data, pp->payload.len);
-			for (int k = 0; k < cvector_size(info->key->key_arr); k++) {
+			cJSON *jp = cJSON_ParseWithLength(
+			    pp->payload.data, pp->payload.len);
+			for (int k = 0; k < cvector_size(info->key->key_arr);
+			     k++) {
 				if (jp == NULL) {
 					break;
 				}
-				jp = cJSON_GetObjectItem(jp, info->key->key_arr[k]);
+				jp = cJSON_GetObjectItem(
+				    jp, info->key->key_arr[k]);
 			}
 
-			switch (jp->type)
-			{
+			switch (jp->type) {
 			case cJSON_String:
 				if (info->key->auto_inc) {
-					sprintf(str, "%s%d", cJSON_GetStringValue(jp), index++);
+					sprintf(str, "%s%d",
+					    cJSON_GetStringValue(jp), index++);
 				} else {
-					sprintf(str, "%s", cJSON_GetStringValue(jp));
+					sprintf(str, "%s",
+					    cJSON_GetStringValue(jp));
 				}
 				break;
 			case cJSON_Number:
 				if (info->key->auto_inc) {
-					sprintf(str, "%ld%d", (long) cJSON_GetNumberValue(jp), index++);
+					sprintf(str, "%ld%d",
+					    (long) cJSON_GetNumberValue(jp),
+					    index++);
 				} else {
-					sprintf(str, "%ld", (long) cJSON_GetNumberValue(jp));
+					sprintf(str, "%ld",
+					    (long) cJSON_GetNumberValue(jp));
 				}
 				break;
 			default:
@@ -511,9 +527,7 @@ generate_key(rule *info, int j, nano_work *work)
 
 	char *ret = nng_strdup(str);
 	return ret;
-
 }
-
 
 static int
 add_info_to_json(rule *info, cJSON *jso, int j, nano_work *work)
@@ -580,26 +594,29 @@ add_info_to_json(rule *info, cJSON *jso, int j, nano_work *work)
 		case RULE_TIMESTAMP:
 			if (info->as[j]) {
 				cJSON_AddNumberToObject(jso, info->as[j],
-				    (unsigned long)time(NULL));
+				    (unsigned long) time(NULL));
 			} else {
 				cJSON_AddNumberToObject(jso, "timestamp",
-				    (unsigned long)time(NULL));
+				    (unsigned long) time(NULL));
 			}
 			break;
 		case RULE_PAYLOAD_ALL:;
-			char *payload = pp->payload.data;
-			cJSON *jp = cJSON_ParseWithLength(payload, pp->payload.len);
+			char  *payload = pp->payload.data;
+			cJSON *jp =
+			    cJSON_ParseWithLength(payload, pp->payload.len);
 
 			if (info->as[j]) {
 				if (jp) {
-					cJSON_AddItemToObject(jso, info->as[j], jp);
+					cJSON_AddItemToObject(
+					    jso, info->as[j], jp);
 				} else {
 					cJSON_AddStringToObject(
 					    jso, info->as[j], payload);
 				}
 			} else {
 				if (jp) {
-					cJSON_AddItemToObject(jso, "payload", jp);
+					cJSON_AddItemToObject(
+					    jso, "payload", jp);
 				} else {
 					cJSON_AddStringToObject(
 					    jso, "payload", payload);
@@ -613,24 +630,35 @@ add_info_to_json(rule *info, cJSON *jso, int j, nano_work *work)
 					switch (info->payload[pi]->type) {
 					case cJSON_Number:
 						if (info->payload[pi]->pas) {
-							cJSON_AddNumberToObject(jso,
-							    info->payload[pi]->pas,
-							    (long) info->payload[pi]->value);
-
+							cJSON_AddNumberToObject(
+							    jso,
+							    info->payload[pi]
+							        ->pas,
+							    (long) info
+							        ->payload[pi]
+							        ->value);
 						}
 						break;
 					case cJSON_String:
 						if (info->payload[pi]->pas) {
-							cJSON_AddStringToObject(jso,
-							    info->payload[pi]->pas,
-							    (char *) info->payload[pi]->value);
+							cJSON_AddStringToObject(
+							    jso,
+							    info->payload[pi]
+							        ->pas,
+							    (char *) info
+							        ->payload[pi]
+							        ->value);
 						}
 						break;
 					case cJSON_Object:
 						if (info->payload[pi]->pas) {
-							cJSON_AddItemToObject(jso,
-							    info->payload[pi]->pas,
-							    (cJSON*) info->payload[pi]->value);
+							cJSON_AddItemToObject(
+							    jso,
+							    info->payload[pi]
+							        ->pas,
+							    (cJSON *) info
+							        ->payload[pi]
+							        ->value);
 						}
 						break;
 					default:
@@ -649,12 +677,12 @@ add_info_to_json(rule *info, cJSON *jso, int j, nano_work *work)
 }
 
 static char *
-compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, nano_work *work)
+compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j,
+    nano_work *work)
 {
-	pub_packet_struct *pp = work->pub_packet;
-	conn_param        *cp = work->cparam;
-	char *ret = NULL;
-
+	pub_packet_struct *pp  = work->pub_packet;
+	conn_param        *cp  = work->cparam;
+	char              *ret = NULL;
 
 	if (info->flag[j]) {
 		switch (j) {
@@ -672,7 +700,8 @@ compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, 
 			} else {
 				strcat(key, "Id");
 			}
-			sprintf(value, "%s\'%d\'", value, pp->var_header.publish.packet_id);
+			sprintf(value, "%s\'%d\'", value,
+			    pp->var_header.publish.packet_id);
 			break;
 		case RULE_TOPIC:;
 			char *topic = pp->var_header.publish.topic_name.body;
@@ -717,7 +746,8 @@ compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, 
 				strcat(key, "Timestamp");
 			}
 
-			sprintf(value, "%s%lu", value, (unsigned long) time(NULL));
+			sprintf(
+			    value, "%s%lu", value, (unsigned long) time(NULL));
 			break;
 		case RULE_PAYLOAD_ALL:;
 			char *payload = pp->payload.data;
@@ -741,59 +771,251 @@ compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, 
 				if (info->payload[pi]->is_store) {
 					if (info->payload[pi]->pas) {
 
-						switch (info->payload[pi]->type) {
+						switch (
+						    info->payload[pi]->type) {
 						case cJSON_Number:
-								if (is_need_set) {
-									  if (RULE_FORWORD_SQLITE == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s INT;\n", info->sqlite_table, info->payload[pi]->pas);
-									  } else if (RULE_FORWORD_MYSOL == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s INT;\n", info->mysql->table, info->payload[pi]->pas);
-									  }
+							if (is_need_set) {
+								if (RULE_FORWORD_SQLITE ==
+								    info->forword_type) {
+									snprintf(
+									    tmp_key,
+									    128,
+									    "A"
+									    "L"
+									    "T"
+									    "E"
+									    "R"
+									    " "
+									    "T"
+									    "A"
+									    "B"
+									    "L"
+									    "E"
+									    " "
+									    "%"
+									    "s"
+									    " "
+									    "A"
+									    "D"
+									    "D"
+									    " "
+									    "%"
+									    "s"
+									    " "
+									    "I"
+									    "N"
+									    "T"
+									    ";"
+									    "\n",
+									    info->sqlite_table,
+									    info
+									        ->payload
+									            [pi]
+									        ->pas);
+								} else if (
+								    RULE_FORWORD_MYSOL ==
+								    info->forword_type) {
+									snprintf(
+									    tmp_key,
+									    128,
+									    "A"
+									    "L"
+									    "T"
+									    "E"
+									    "R"
+									    " "
+									    "T"
+									    "A"
+									    "B"
+									    "L"
+									    "E"
+									    " "
+									    "%"
+									    "s"
+									    " "
+									    "A"
+									    "D"
+									    "D"
+									    " "
+									    "%"
+									    "s"
+									    " "
+									    "I"
+									    "N"
+									    "T"
+									    ";"
+									    "\n",
+									    info->mysql
+									        ->table,
+									    info
+									        ->payload
+									            [pi]
+									        ->pas);
 								}
-								strcat(key, info->payload[pi]->pas);
-								strcat(key, ", ");
-								if (strlen(value) > strlen("VALUES (")) {
-									sprintf(value, "%s, %ld", value, (long) info->payload[pi]->value);
-								} else {
-									sprintf(value, "%s %ld", value, (long) info->payload[pi]->value);
-								}
+							}
+							strcat(key,
+							    info->payload[pi]
+							        ->pas);
+							strcat(key, ", ");
+							if (strlen(value) >
+							    strlen(
+							        "VALUES (")) {
+								sprintf(value,
+								    "%s, %ld",
+								    value,
+								    (long) info
+								        ->payload
+								            [pi]
+								        ->value);
+							} else {
+								sprintf(value,
+								    "%s %ld",
+								    value,
+								    (long) info
+								        ->payload
+								            [pi]
+								        ->value);
+							}
 							break;
 						case cJSON_String:
-							if (info->payload[pi]->pas) {
+							if (info->payload[pi]
+							        ->pas) {
 								if (is_need_set) {
-									  if (RULE_FORWORD_SQLITE == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s TEXT;\n", info->sqlite_table, info->payload[pi]->pas);
-									  } else if (RULE_FORWORD_MYSOL == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s TEXT;\n", info->mysql->table, info->payload[pi]->pas);
-									  }
+									if (RULE_FORWORD_SQLITE ==
+									    info->forword_type) {
+										snprintf(
+										    tmp_key,
+										    128,
+										    "ALTER TABLE %s ADD %s TEXT;\n",
+										    info->sqlite_table,
+										    info
+										        ->payload
+										            [pi]
+										        ->pas);
+									} else if (
+									    RULE_FORWORD_MYSOL ==
+									    info->forword_type) {
+										snprintf(
+										    tmp_key,
+										    128,
+										    "ALTER TABLE %s ADD %s TEXT;\n",
+										    info->mysql
+										        ->table,
+										    info
+										        ->payload
+										            [pi]
+										        ->pas);
+									}
 								}
-								strcat(key, info->payload[pi]->pas);
-								strcat(key, ", ");
-								if (strlen(value) > strlen("VALUES (")) {
-									sprintf(value, "%s, \'%s\'", value, (char*) info->payload[pi]->value);
+								strcat(key,
+								    info
+								        ->payload
+								            [pi]
+								        ->pas);
+								strcat(
+								    key, ", ");
+								if (strlen(
+								        value) >
+								    strlen(
+								        "VALUE"
+								        "S "
+								        "(")) {
+									sprintf(
+									    value,
+									    "%"
+									    "s"
+									    ","
+									    " "
+									    "\'%s\'",
+									    value,
+									    (char *) info
+									        ->payload
+									            [pi]
+									        ->value);
 								} else {
-									sprintf(value, "%s \'%s\'", value, (char*) info->payload[pi]->value);
+									sprintf(
+									    value,
+									    "%"
+									    "s"
+									    " "
+									    "\'%s\'",
+									    value,
+									    (char *) info
+									        ->payload
+									            [pi]
+									        ->value);
 								}
 							}
 							break;
 						case cJSON_Object:
-							if (info->payload[pi]->pas) {
+							if (info->payload[pi]
+							        ->pas) {
 								if (is_need_set) {
-									  if (RULE_FORWORD_SQLITE == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s TEXT;\n", info->sqlite_table, info->payload[pi]->pas);
-									  } else if (RULE_FORWORD_MYSOL == info->forword_type) {
-										snprintf(tmp_key, 128, "ALTER TABLE %s ADD %s TEXT;\n", info->mysql->table, info->payload[pi]->pas);
-									  }
+									if (RULE_FORWORD_SQLITE ==
+									    info->forword_type) {
+										snprintf(
+										    tmp_key,
+										    128,
+										    "ALTER TABLE %s ADD %s TEXT;\n",
+										    info->sqlite_table,
+										    info
+										        ->payload
+										            [pi]
+										        ->pas);
+									} else if (
+									    RULE_FORWORD_MYSOL ==
+									    info->forword_type) {
+										snprintf(
+										    tmp_key,
+										    128,
+										    "ALTER TABLE %s ADD %s TEXT;\n",
+										    info->mysql
+										        ->table,
+										    info
+										        ->payload
+										            [pi]
+										        ->pas);
+									}
 								}
-								strcat(key, info->payload[pi]->pas);
-								strcat(key, ", ");
-								char *tmp = cJSON_PrintUnformatted((cJSON*) info->payload[pi]->value);
-								if (strlen(value) > strlen("VALUES (")) {
-									sprintf(value, "%s, \'%s\'", value, tmp);
+								strcat(key,
+								    info
+								        ->payload
+								            [pi]
+								        ->pas);
+								strcat(
+								    key, ", ");
+								char *tmp = cJSON_PrintUnformatted(
+								    (cJSON *) info
+								        ->payload
+								            [pi]
+								        ->value);
+								if (strlen(
+								        value) >
+								    strlen(
+								        "VALUE"
+								        "S "
+								        "(")) {
+									sprintf(
+									    value,
+									    "%"
+									    "s"
+									    ","
+									    " "
+									    "\'%s\'",
+									    value,
+									    tmp);
 								} else {
-									sprintf(value, "%s \'%s\'", value, tmp);
+									sprintf(
+									    value,
+									    "%"
+									    "s"
+									    " "
+									    "\'%s\'",
+									    value,
+									    tmp);
 								}
-								cJSON_free(tmp);
+								cJSON_free(
+								    tmp);
 							}
 							break;
 						default:
@@ -802,14 +1024,12 @@ compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, 
 
 						strcat(ret_key, tmp_key);
 						memset(tmp_key, 0, 128);
-
 					}
 				}
 			}
 
 			if (strlen(ret_key)) {
 				ret = nng_strdup(ret_key);
-
 			}
 			break;
 
@@ -828,25 +1048,28 @@ compose_sql_clause(rule *info, char *key, char *value, bool is_need_set, int j, 
 int
 rule_engine_insert_sql(nano_work *work)
 {
-	rule  *rules = work->config->rule_eng.rules;
-	size_t             rule_size  = cvector_size(rules);
-	pub_packet_struct *pp         = work->pub_packet;
-	conn_param        *cp         = work->cparam;
-	static uint32_t    index      = 0;
-	static bool is_first_time = true;
-	bool is_need_set = false;
-	static bool is_first_time_mysql = true;
-	bool is_need_set_mysql = false;
+	rule              *rules               = work->config->rule_eng.rules;
+	size_t             rule_size           = cvector_size(rules);
+	pub_packet_struct *pp                  = work->pub_packet;
+	conn_param        *cp                  = work->cparam;
+	static uint32_t    index               = 0;
+	static bool        is_first_time       = true;
+	bool               is_need_set         = false;
+	static bool        is_first_time_mysql = true;
+	bool               is_need_set_mysql   = false;
 
 	if (rule_mutex == NULL) {
 		nng_mtx_alloc(&rule_mutex);
 	}
 
 	for (size_t i = 0; i < rule_size; i++) {
-		if (true == rules[i].enabled && rule_engine_filter(work, &rules[i])) {
+		if (true == rules[i].enabled &&
+		    rule_engine_filter(work, &rules[i])) {
 #if defined(FDB_SUPPORT)
-			char fdb_key[pp->var_header.publish.topic_name.len+sizeof(uint64_t)];
-			if (RULE_ENG_FDB & work->config->rule_eng.option && RULE_FORWORD_FDB == rules[i].forword_type) {
+			char fdb_key[pp->var_header.publish.topic_name.len +
+			    sizeof(uint64_t)];
+			if (RULE_ENG_FDB & work->config->rule_eng.option &&
+			    RULE_FORWORD_FDB == rules[i].forword_type) {
 				cJSON *jso = NULL;
 				jso        = cJSON_CreateObject();
 
@@ -872,20 +1095,23 @@ rule_engine_insert_sql(nano_work *work)
 				    fdb_database_create_transaction(
 				        work->config->rule_eng.rdb[1], &tr);
 				if (e) {
-					fprintf(stderr, "%s\n", fdb_get_error(e));
+					fprintf(
+					    stderr, "%s\n", fdb_get_error(e));
 				}
 
-				fdb_transaction_set(tr, key,
-				    strlen(key), dest, strlen(dest));
+				fdb_transaction_set(
+				    tr, key, strlen(key), dest, strlen(dest));
 				FDBFuture *f = fdb_transaction_commit(tr);
 
 				e = fdb_future_block_until_ready(f);
 				if (e) {
-					fprintf(stderr, "%s\n", fdb_get_error(e));
+					fprintf(
+					    stderr, "%s\n", fdb_get_error(e));
 				}
 
 				fdb_future_destroy(f);
-				fdb_transaction_clear(tr, fdb_key, strlen(fdb_key));
+				fdb_transaction_clear(
+				    tr, fdb_key, strlen(fdb_key));
 				fdb_transaction_destroy(tr);
 
 				free(key);
@@ -894,7 +1120,8 @@ rule_engine_insert_sql(nano_work *work)
 			}
 #endif
 
-			if (RULE_ENG_RPB & work->config->rule_eng.option && RULE_FORWORD_REPUB == rules[i].forword_type) {
+			if (RULE_ENG_RPB & work->config->rule_eng.option &&
+			    RULE_FORWORD_REPUB == rules[i].forword_type) {
 				cJSON *jso = NULL;
 				jso        = cJSON_CreateObject();
 
@@ -903,10 +1130,11 @@ rule_engine_insert_sql(nano_work *work)
 					    &rules[i], jso, j, work);
 				}
 
-				char *dest = cJSON_PrintUnformatted(jso);
+				char    *dest  = cJSON_PrintUnformatted(jso);
 				repub_t *repub = rules[i].repub;
 
-				nano_client_publish(repub->sock, repub->topic, dest, strlen(dest), 0, NULL);
+				nano_client_publish(repub->sock, repub->topic,
+				    dest, strlen(dest), 0, NULL);
 				// puts(repub->topic);
 				// puts(dest);
 
@@ -914,19 +1142,21 @@ rule_engine_insert_sql(nano_work *work)
 				cJSON_Delete(jso);
 			}
 
-			if (RULE_ENG_SDB & work->config->rule_eng.option && RULE_FORWORD_SQLITE == rules[i].forword_type) {
+			if (RULE_ENG_SDB & work->config->rule_eng.option &&
+			    RULE_FORWORD_SQLITE == rules[i].forword_type) {
 				char sql_clause[1024] = "INSERT INTO ";
 				char key[128]         = { 0 };
-				snprintf(key, 128, "%s (", rules[i].sqlite_table);
-				char value[800]       = "VALUES (";
+				snprintf(
+				    key, 128, "%s (", rules[i].sqlite_table);
+				char value[800] = "VALUES (";
 				for (size_t j = 0; j < 9; j++) {
 					nng_mtx_lock(rule_mutex);
 					if (true == is_first_time) {
-						is_need_set   = true;
+						is_need_set = true;
 					}
 					char *ret =
-					    compose_sql_clause(&rules[i],
-					        key, value, is_need_set, j, work);
+					    compose_sql_clause(&rules[i], key,
+					        value, is_need_set, j, work);
 					if (ret) {
 						// puts(ret);
 						log_debug("%s", ret);
@@ -935,11 +1165,12 @@ rule_engine_insert_sql(nano_work *work)
 						        ->rule_eng.rdb[0];
 						char *err_msg = NULL;
 						int   rc      = sqlite3_exec(
-						           sdb, ret, 0, 0, &err_msg);
+                                                    sdb, ret, 0, 0, &err_msg);
 						// FIXME: solve in a more
-						// elegant way 
+						// elegant way
 						if (rc != SQLITE_OK) {
-							// fprintf(stderr, "SQL error: num %d %s\n",
+							// fprintf(stderr, "SQL
+							// error: num %d %s\n",
 							//     rc, err_msg);
 							sqlite3_free(err_msg);
 							// sqlite3_close(sdb);
@@ -957,8 +1188,6 @@ rule_engine_insert_sql(nano_work *work)
 					nng_mtx_unlock(rule_mutex);
 				}
 
-				
-
 				// puts(key);
 				// puts(value);
 				char *p = strrchr(key, ',');
@@ -971,10 +1200,11 @@ rule_engine_insert_sql(nano_work *work)
 
 				// puts(sql_clause);
 				log_debug("%s", sql_clause);
-				sqlite3 *sdb = (sqlite3 *) work->config->rule_eng.rdb[0];
-				char    *err_msg = NULL;
-				int      rc      = sqlite3_exec(
-				              sdb, sql_clause, 0, 0, &err_msg);
+				sqlite3 *sdb =
+				    (sqlite3 *) work->config->rule_eng.rdb[0];
+				char *err_msg = NULL;
+				int   rc      = sqlite3_exec(
+                                    sdb, sql_clause, 0, 0, &err_msg);
 				if (rc != SQLITE_OK) {
 					fprintf(stderr, "SQL error: %s\n",
 					    err_msg);
@@ -983,22 +1213,23 @@ rule_engine_insert_sql(nano_work *work)
 
 					return 1;
 				}
-
 			}
 
-			if (RULE_ENG_MDB & work->config->rule_eng.option && RULE_FORWORD_MYSOL == rules[i].forword_type) {
+			if (RULE_ENG_MDB & work->config->rule_eng.option &&
+			    RULE_FORWORD_MYSOL == rules[i].forword_type) {
 				char sql_clause[1024] = "INSERT INTO ";
 				char key[128]         = { 0 };
-				snprintf(key, 128, "%s (", rules[i].mysql->table);
-				char value[800]       = "VALUES (";
+				snprintf(
+				    key, 128, "%s (", rules[i].mysql->table);
+				char value[800] = "VALUES (";
 				for (size_t j = 0; j < 9; j++) {
 					nng_mtx_lock(rule_mutex);
 					if (true == is_first_time_mysql) {
-						is_need_set_mysql   = true;
+						is_need_set_mysql = true;
 					}
-					char *ret =
-					    compose_sql_clause(&rules[i],
-					        key, value, is_need_set_mysql, j, work);
+					char *ret = compose_sql_clause(
+					    &rules[i], key, value,
+					    is_need_set_mysql, j, work);
 
 					if (ret && is_need_set_mysql) {
 						is_need_set_mysql = false;
@@ -1009,12 +1240,19 @@ rule_engine_insert_sql(nano_work *work)
 						char *p_b = ret;
 
 						while (NULL != p) {
-							char *p = strchr(p_b, '\n');
+							char *p =
+							    strchr(p_b, '\n');
 							if (NULL != p) {
 								*p = '\0';
-  								if (mysql_query(rules[i].mysql->conn, p_b)) {
-  									// fprintf(stderr, "%s\n", mysql_error(rules[i].mysql->conn));
-  								}
+								if (mysql_query(
+								        rules[i]
+								            .mysql
+								            ->conn,
+								        p_b)) {
+									// fprintf(stderr,
+									// "%s\n",
+									// mysql_error(rules[i].mysql->conn));
+								}
 								p_b = ++p;
 
 							} else {
@@ -1033,8 +1271,6 @@ rule_engine_insert_sql(nano_work *work)
 					nng_mtx_unlock(rule_mutex);
 				}
 
-				
-
 				// puts(key);
 				// puts(value);
 				char *p = strrchr(key, ',');
@@ -1047,20 +1283,19 @@ rule_engine_insert_sql(nano_work *work)
 
 				// puts(sql_clause);
 
-  				if (mysql_query(rules[i].mysql->conn, sql_clause)) {
-  					fprintf(stderr, "%s\n", mysql_error(rules[i].mysql->conn));
-  					mysql_close(rules[i].mysql->conn);
-  					exit(1);
-  				}
+				if (mysql_query(
+				        rules[i].mysql->conn, sql_clause)) {
+					fprintf(stderr, "%s\n",
+					    mysql_error(rules[i].mysql->conn));
+					mysql_close(rules[i].mysql->conn);
+					exit(1);
+				}
 			}
-		
-		
 		}
 	}
 
 	return 0;
 }
-
 
 #endif
 
@@ -1143,8 +1378,8 @@ handle_pub(nano_work *work, struct pipe_content *pipe_ct, uint8_t proto,
 				if (work->config->acl_deny_action ==
 				    ACL_DISCONNECT) {
 					log_warn(
-					    "acl deny, disconnect client");
-					return NORMAL_DISCONNECTION;
+					    "acl deny, disconnect client 1");
+					return BANNED;
 				} else {
 					return BANNED;
 				}
@@ -1189,8 +1424,8 @@ static void inline handle_pub_retain_sqlite(const nano_work *work, char *topic)
 {
 	if (work->pub_packet->fixed_header.retain) {
 		if (work->pub_packet->payload.len > 0) {
-			nng_mqtt_qos_db_set_retain(
-			    work->sqlite_db, topic, work->msg, work->proto_ver);
+			nng_mqtt_qos_db_set_retain(work->sqlite_db, topic,
+			    work->msg, work->proto_ver);
 		} else {
 			nng_mqtt_qos_db_remove_retain(work->sqlite_db, topic);
 		}
@@ -1207,7 +1442,7 @@ static void inline handle_pub_retain_dbtree(const nano_work *work, char *topic)
 		if (work->pub_packet->payload.len > 0) {
 			nng_msg_clone(work->msg);
 
-			property *prop  = NULL;
+			property *prop = NULL;
 			// reserve property info
 			nng_mqtt_msg_proto_data_alloc(work->msg);
 			if (work->proto_ver == MQTT_PROTOCOL_VERSION_v5 &&
@@ -1217,12 +1452,12 @@ static void inline handle_pub_retain_dbtree(const nano_work *work, char *topic)
 					nng_mqttv5_msg_decode(work->msg);
 				}
 			}
-			ret = dbtree_insert_retain(work->db_ret, topic, work->msg);
+			ret = dbtree_insert_retain(
+			    work->db_ret, topic, work->msg);
 		} else {
 			log_debug("delete retain message");
 			ret = dbtree_delete_retain(work->db_ret, topic);
 		}
-
 
 		if (ret != NULL) {
 			nng_msg_free(ret);
@@ -1243,7 +1478,6 @@ static void inline handle_pub_retain(const nano_work *work, char *topic)
 }
 
 #endif
-
 
 void
 free_pub_packet(struct pub_packet_struct *pub_packet)
@@ -1495,7 +1729,8 @@ decode_pub_message(nano_work *work, uint8_t proto)
 		// variable header
 		// topic length
 		pub_packet->var_header.publish.topic_name.body =
-		    (char *) copyn_utf8_str(msg_body, &pos, (int *) &len, msg_len);
+		    (char *) copyn_utf8_str(
+		        msg_body, &pos, (int *) &len, msg_len);
 		if (len >= 0)
 			// topic could be NULL here (topic alias)
 			pub_packet->var_header.publish.topic_name.len = len;
@@ -1530,7 +1765,7 @@ decode_pub_message(nano_work *work, uint8_t proto)
 		log_debug("topic: [%.*s], len: [%d], qos: %d",
 		    pub_packet->var_header.publish.topic_name.len,
 		    pub_packet->var_header.publish.topic_name.body,
-			pub_packet->var_header.publish.topic_name.len,
+		    pub_packet->var_header.publish.topic_name.len,
 		    pub_packet->fixed_header.qos);
 
 		if (pub_packet->fixed_header.qos > 0) {
@@ -1554,10 +1789,11 @@ decode_pub_message(nano_work *work, uint8_t proto)
 				if (check_properties(
 				        pub_packet->var_header.publish
 				            .properties) != 0) {
-					// check if subid exist in publish msg from client
-				    // property_get_value(pub_packet->var_header
-				    //                        .publish.properties,
-				    //     SUBSCRIPTION_IDENTIFIER) != NULL
+					// check if subid exist in publish msg
+					// from client
+					// property_get_value(pub_packet->var_header
+					//                        .publish.properties,
+					//     SUBSCRIPTION_IDENTIFIER) != NULL
 					return PROTOCOL_ERROR;
 				}
 			}

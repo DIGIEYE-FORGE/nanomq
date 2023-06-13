@@ -9,11 +9,11 @@
 #include "include/unsub_handler.h"
 #include "include/nanomq.h"
 #include "include/sub_handler.h"
-#include "nng/protocol/mqtt/mqtt_parser.h"
-#include "nng/supplemental/nanolib/nanolib.h"
-#include "nng/supplemental/nanolib/log.h"
 #include "nng/nng.h"
 #include "nng/protocol/mqtt/mqtt.h"
+#include "nng/protocol/mqtt/mqtt_parser.h"
+#include "nng/supplemental/nanolib/log.h"
+#include "nng/supplemental/nanolib/nanolib.h"
 
 int
 decode_unsub_msg(nano_work *work)
@@ -27,11 +27,11 @@ decode_unsub_msg(nano_work *work)
 	uint32_t len_of_str = 0, len_of_topic;
 
 	packet_unsubscribe *unsub_pkt     = work->unsub_pkt;
-	nng_msg *           msg           = work->msg;
+	nng_msg            *msg           = work->msg;
 	size_t              remaining_len = nng_msg_remaining_len(msg);
 
-	uint8_t property_id;
-	topic_node *       tn, *_tn;
+	uint8_t     property_id;
+	topic_node *tn, *_tn;
 
 	const uint8_t proto_ver = work->proto_ver;
 
@@ -41,7 +41,7 @@ decode_unsub_msg(nano_work *work)
 	vpos += 2;
 
 	unsub_pkt->properties = NULL;
-	unsub_pkt->prop_len = 0;
+	unsub_pkt->prop_len   = 0;
 	// Mqtt_v5 include property
 	unsub_pkt->properties = NULL;
 	if (MQTT_PROTOCOL_VERSION_v5 == proto_ver) {
@@ -63,12 +63,13 @@ decode_unsub_msg(nano_work *work)
 		return NNG_ENOMEM;
 	}
 	unsub_pkt->node = tn;
-	tn->next = NULL;
+	tn->next        = NULL;
 
 	while (1) {
 		_tn = tn;
 
-		len_of_topic = get_utf8_str(&tn->topic.body, payload_ptr, &bpos);
+		len_of_topic =
+		    get_utf8_str(&tn->topic.body, payload_ptr, &bpos);
 		if (len_of_topic != -1) {
 			tn->topic.len = len_of_topic;
 		} else {
@@ -117,7 +118,7 @@ encode_unsuback_msg(nng_msg *msg, nano_work *work)
 	}
 
 	if (MQTT_PROTOCOL_VERSION_v5 == proto_ver) {
-		//TODO set property if necessary 
+		// TODO set property if necessary
 		encode_properties(msg, NULL, CMD_UNSUBACK);
 	}
 
@@ -165,12 +166,12 @@ encode_unsuback_msg(nng_msg *msg, nano_work *work)
 int
 unsub_ctx_handle(nano_work *work)
 {
-	topic_node *   tn = work->unsub_pkt->node;
-	char *         topic_str;
-	char *         client_id;
+	topic_node    *tn = work->unsub_pkt->node;
+	char          *topic_str;
+	char          *client_id;
 	struct client *cli     = NULL;
-	void *         cli_ctx = NULL;
-	int rv;
+	void          *cli_ctx = NULL;
+	int            rv;
 
 	client_id = (char *) conn_param_get_clientid(
 	    (conn_param *) nng_msg_get_conn_param(work->msg));
@@ -226,7 +227,7 @@ unsub_pkt_free(packet_unsubscribe *unsub_pkt)
 	if (unsub_pkt->prop_len != 0) {
 		property_free(unsub_pkt->properties);
 		unsub_pkt->properties = NULL;
-		unsub_pkt->prop_len = 0;
+		unsub_pkt->prop_len   = 0;
 	}
 
 	topic_node *tn = unsub_pkt->node;

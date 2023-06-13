@@ -16,7 +16,7 @@ struct cmd_work {
 	nng_aio *aio;
 	nng_msg *msg;
 	nng_ctx  ctx;
-	conf *   config;
+	conf    *config;
 };
 
 static int
@@ -25,8 +25,8 @@ handle_recv(const char *msg, size_t msg_len, conf *config, char **err_msg)
 	cJSON *obj = cJSON_ParseWithLength(msg, msg_len);
 	cJSON *item;
 	int    rv        = 0;
-	char * conf_file = NULL;
-	char * cmd       = NULL;
+	char  *conf_file = NULL;
+	char  *cmd       = NULL;
 
 	getStringValue(obj, item, "cmd", cmd, rv);
 
@@ -76,7 +76,6 @@ handle_recv(const char *msg, size_t msg_len, conf *config, char **err_msg)
 	reload_auth_config(&config->auths, &new_conf->auths);
 	reload_log_config(config, new_conf);
 
-
 	conf_fini(new_conf);
 	cJSON_Delete(obj);
 	return 0;
@@ -90,15 +89,17 @@ void
 cmd_server_cb(void *arg)
 {
 	struct cmd_work *work = arg;
-	nng_msg *        msg;
+	nng_msg         *msg;
 	int              rv;
 
 	switch (work->state) {
 	case INIT:
 		work->state = RECV;
+
 		nng_ctx_recv(work->ctx, work->aio);
 		break;
 	case RECV:
+
 		if ((rv = nng_aio_result(work->aio)) != 0) {
 			nng_fatal("nng_recv_aio", rv);
 		}
@@ -211,7 +212,7 @@ client(const char *cmd)
 	nng_socket  sock;
 	nng_dialer  dialer;
 	int         rv;
-	char *      buf = NULL;
+	char       *buf = NULL;
 	size_t      sz  = 0;
 	const char *url = CMD_IPC_URL;
 

@@ -47,9 +47,9 @@
 // use in poll.
 struct work {
 	enum { INIT, RECV, WAIT, SEND } state;
-	nng_aio *  aio;
+	nng_aio   *aio;
 	nng_socket sock;
-	nng_msg *  msg;
+	nng_msg   *msg;
 };
 
 void
@@ -63,7 +63,7 @@ void
 server_cb(void *arg)
 {
 	struct work *work = arg;
-	nng_msg *    msg;
+	nng_msg     *msg;
 	int          rv;
 	uint32_t     when;
 
@@ -73,6 +73,7 @@ server_cb(void *arg)
 		nng_recv_aio(work->sock, work->aio);
 		break;
 	case RECV:
+		printf("here ====> 1\n");
 		if ((rv = nng_aio_result(work->aio)) != 0) {
 			fatal("nng_recv_aio", rv);
 		}
@@ -163,7 +164,7 @@ client(const char *url, const char *msecstr)
 {
 	nng_socket sock;
 	int        rv;
-	nng_msg *  msg;
+	nng_msg   *msg;
 	nng_time   start;
 	nng_time   end;
 	unsigned   msec;
@@ -198,7 +199,7 @@ client(const char *url, const char *msecstr)
 	nng_msg_free(msg);
 	nng_close(sock);
 
-	printf("Request took %u milliseconds.\n", (uint32_t)(end - start));
+	printf("Request took %u milliseconds.\n", (uint32_t) (end - start));
 	return (0);
 }
 
