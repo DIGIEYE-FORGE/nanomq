@@ -80,7 +80,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 		return false;
 	}
 
-	char *sql = custom_cat("SELECT * FROM users WHERE username = '",
+	char *sql = custom_cat("SELECT * FROM credentials WHERE username = '",
 	    (const char *) conn_param_get_username(param));
 	sql       = custom_cat(sql, "'");
 	rc        = sqlite3_exec(db, sql, callback, (void *) u, &err_msg);

@@ -312,8 +312,8 @@ server_cb(void *arg)
 				// TODO: mine
 				work->code  = rv;
 				work->state = SEND;
-				// break;
 				log_error("sub_handler: [%d]", rv);
+				return;
 			}
 
 			// TODO not all codes needs to close the pipe
