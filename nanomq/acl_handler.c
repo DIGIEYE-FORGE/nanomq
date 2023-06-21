@@ -69,7 +69,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 	char    *err_msg = 0;
 	user    *u       = calloc(1, sizeof(user));
 
-	int rc = sqlite3_open("./../conf/edge.sqlite", &db);
+	int rc = sqlite3_open("/srv/db/edge.sqlite", &db);
 
 	if (rc != SQLITE_OK) {
 
