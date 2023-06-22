@@ -265,7 +265,7 @@ sub_ctx_handle(nano_work *work)
 					log_error(
 					    "acl deny, disconnect client");
 					// TODO disconnect client or return
-					return DISCONNECT;
+					return BANNED;
 					// error code
 					goto next;
 				}

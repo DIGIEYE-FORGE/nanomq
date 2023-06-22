@@ -47,8 +47,7 @@ callback(void *NotUsed, int argc, char **argv, char **azColName)
 
 	for (int i = 0; i < argc; i++) {
 
-		// printf("%s = %s\n", azColName[i], argv[i] ? argv[i] :
-		// "NULL");
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 		if (strcmp(azColName[i], "username") == 0) {
 			tmp->username = strdup(argv[i]);
 		} else if (strcmp(azColName[i], "password") == 0) {
@@ -85,10 +84,10 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 	sql       = custom_cat(sql, "'");
 	rc        = sqlite3_exec(db, sql, callback, (void *) u, &err_msg);
 
-	// printf("username: %s | param: %s\n", u->username,
-	//     conn_param_get_username(param));
-	// printf("password: %s | param: %s\n", u->password,
-	//     conn_param_get_password(param));
+	printf("username: %s | param: %s\n", u->username,
+	    conn_param_get_username(param));
+	printf("password: %s | param: %s\n", u->password,
+	    conn_param_get_password(param));
 
 	if (rc != SQLITE_OK) {
 
