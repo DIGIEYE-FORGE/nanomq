@@ -102,7 +102,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 
 	sqlite3_close(db);
 	if (u->username != NULL && u->password != NULL) {
-
+		fprintf(stderr, "s");
 		if (strcmp(conn_param_get_username(param), u->username) == 0 &&
 		    strcmp(conn_param_get_password(param), u->password) == 0) {
 			  fprintf(stderr, "s");
