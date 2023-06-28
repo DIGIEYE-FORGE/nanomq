@@ -105,6 +105,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 
 		if (strcmp(conn_param_get_username(param), u->username) == 0 &&
 		    strcmp(conn_param_get_password(param), u->password) == 0) {
+			  fprintf(stderr, "s");
 			return true;
 		}
 		else if(strcmp(conn_param_get_password(param), u->password) != 0 ){
