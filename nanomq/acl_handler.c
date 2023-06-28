@@ -116,6 +116,7 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 	                return false;
 	        }
 	}
+	// #endif
 }
 	
 // #endif
