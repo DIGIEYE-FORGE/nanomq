@@ -107,7 +107,14 @@ auth_acl(conf *config, acl_action_type act_type, conn_param *param,
 		    strcmp(conn_param_get_password(param), u->password) == 0) {
 			return true;
 		}
+		else if(strcmp(conn_param_get_password(param), u->password) != 0 ){
+	                fprintf(stderr, "password incorrect ! \n");
+	                return false;
+	        }
+	        else {
+	                fprintf(stderr, "username incorrect ! \n");
+	                return false;
+	        }
 	}
-	return false;
-}
+	
 // #endif
